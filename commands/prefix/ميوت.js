@@ -9,50 +9,31 @@ module.exports = {
   async execute(message, args, client, sendTemp) {
 
     const member = message.mentions.members.first();
-
     if (!member)
-      return sendTemp("❌ منشن الشخص.");
+      return sendTemp("❌ منشن الشخص بالشكل ده: $ميوت @user 5");
+
+    // ناخد المدة من بعد المنشن
+    const duration = parseInt(args[1]);
+
+    if (isNaN(duration))
+      return sendTemp("❌ اكتب المدة بالدقائق بعد المنشن.\nمثال: $ميوت @user 5");
 
     // ⛔ حماية
     if (member.roles.highest.position >= message.member.roles.highest.position)
       return sendTemp("❌ متقدرش تميوت حد أعلى منك.");
 
-    // 👇 نسأل عن المدة
-    const question = await message.channel.send(
-      "⏳ اكتب مدة الميوت بالدقائق.\nاكتب `0` لفك الميوت.\n(عندك 30 ثانية)"
-    );
-
-    const filter = m => m.author.id === message.author.id;
+    if (duration === 0) {
+      await member.timeout(null);
+      return sendTemp(`✅ تم فك الميوت عن ${member.user.tag}`);
+    }
 
     try {
-      const collected = await message.channel.awaitMessages({
-        filter,
-        max: 1,
-        time: 30000,
-        errors: ["time"]
-      });
-
-      const reply = collected.first();
-      const duration = parseInt(reply.content);
-
-      await reply.delete().catch(() => {});
-      await question.delete().catch(() => {});
-
-      if (isNaN(duration))
-        return sendTemp("❌ لازم تكتب رقم.");
-
-      if (duration === 0) {
-        await member.timeout(null);
-        return sendTemp(`✅ تم فك الميوت عن ${member.user.tag}`);
-      }
-
       await member.timeout(duration * 60 * 1000);
-
       sendTemp(`🔇 تم ميوت ${member.user.tag} لمدة ${duration} دقيقة.`);
-
-    } catch {
-      await question.delete().catch(() => {});
-      sendTemp("❌ انتهى الوقت.");
+    } catch (err) {
+      console.log(err);
+      sendTemp("❌ حصل خطأ أثناء تنفيذ الميوت.");
     }
+
   }
 };
